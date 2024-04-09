@@ -1,10 +1,11 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import type { DraftExpense, Value } from "../types";
 import { categories } from "../data/categories";
 import DatePicker from "react-date-picker";
 import "react-calendar/dist/Calendar.css";
 import "react-date-picker/dist/DatePicker.css";
 import ErrorMessage from "./ErrorMessage";
+import { useBudget } from "../hooks/useBudget";
 
 export default function ExpenseForm() {
   const [expense, setExpense] = useState<DraftExpense>({
@@ -13,7 +14,17 @@ export default function ExpenseForm() {
     category: "",
     date: new Date(),
   });
-  const [error, setError] = useState("")
+  const [error, setError] = useState("");
+  const { dispatch, state } = useBudget();
+
+  useEffect(() => {
+    if (state.editingId) {
+      const editingExpense = state.expenses.filter(
+        (currentExpense) => currentExpense.id === state.editingId
+      )[0];
+      setExpense(editingExpense);
+    }
+  }, [state.editingId]);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLSelectElement>
@@ -21,9 +32,11 @@ export default function ExpenseForm() {
     const { name, value } = e.target;
     const isAmountField = ["amount"].includes(name);
     setExpense({
-        ...expense,
-        [name]: isAmountField ? +value : value/*Para convertir a numero, tambien existe la opcion Number(value) */
-    })
+      ...expense,
+      [name]: isAmountField
+        ? +value
+        : value /*Para convertir a numero, tambien existe la opcion Number(value) */,
+    });
   };
 
   const handelChangeDate = (value: Value) => {
@@ -36,12 +49,25 @@ export default function ExpenseForm() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     //validar
-    if(Object.values(expense).includes("")){
-        setError("Todos los campos son obligatorios")
-        return
+    if (Object.values(expense).includes("")) {
+      setError("Todos los campos son obligatorios");
+      return;
     }
-    console.log("todo bien...")
-  }
+    //Actualizar o agregar un nuevo gasto
+    if (state.editingId) {
+      dispatch({ type: "update-expense", payload: {expense: {id: state.editingId, ...expense}}});
+    } else {
+           dispatch({ type: "add-expense", payload: { expense } }); 
+    }
+
+    //reiniciar el state
+    setExpense({
+      amount: 0,
+      expenseName: "",
+      category: "",
+      date: new Date(),
+    });
+  };
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <legend className="uppercase text-center text-2xl font-black border-b-4 border-purple-500 py-2">
