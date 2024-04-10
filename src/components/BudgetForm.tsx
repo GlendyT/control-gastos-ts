@@ -3,6 +3,7 @@ import { useBudget } from "../hooks/useBudget"
 
 
 export default function BudgetForm() {
+  
     const [budget, setBudget] = useState(0)
     const { dispatch } = useBudget()
 
