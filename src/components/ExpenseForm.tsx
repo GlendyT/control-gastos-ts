@@ -8,6 +8,7 @@ import ErrorMessage from "./ErrorMessage";
 import { useBudget } from "../hooks/useBudget";
 
 export default function ExpenseForm() {
+  
   const [expense, setExpense] = useState<DraftExpense>({
     amount: 0,
     expenseName: "",
@@ -15,7 +16,8 @@ export default function ExpenseForm() {
     date: new Date(),
   });
   const [error, setError] = useState("");
-  const { dispatch, state } = useBudget();
+  const [previousAmount, setPreviousAmount] = useState(0)
+  const { dispatch, state, remainingBudget } = useBudget();
 
   useEffect(() => {
     if (state.editingId) {
@@ -23,6 +25,7 @@ export default function ExpenseForm() {
         (currentExpense) => currentExpense.id === state.editingId
       )[0];
       setExpense(editingExpense);
+      setPreviousAmount(editingExpense.amount);
     }
   }, [state.editingId]);
 
@@ -53,6 +56,11 @@ export default function ExpenseForm() {
       setError("Todos los campos son obligatorios");
       return;
     }
+    //Validar que no me pase
+    if( expense.amount - previousAmount > remainingBudget) {
+      setError("Este gasto se sale del presupuesto")
+      return
+    }
     //Actualizar o agregar un nuevo gasto
     if (state.editingId) {
       dispatch({ type: "update-expense", payload: {expense: {id: state.editingId, ...expense}}});
@@ -67,11 +75,12 @@ export default function ExpenseForm() {
       category: "",
       date: new Date(),
     });
+    setPreviousAmount(0)
   };
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <legend className="uppercase text-center text-2xl font-black border-b-4 border-purple-500 py-2">
-        Nuevo Gasto
+        {state.editingId ? "Guardar Cambios" : "Nuevo Gasto"}
       </legend>
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
@@ -139,7 +148,7 @@ export default function ExpenseForm() {
       <input
         type="submit"
         className="bg-purple-600 cursor-pointer w-full p-2 text-white uppercase font-bold rounded-lg"
-        value="Registrar Gasto"
+        value={state.editingId ? "Guardar Cambios" : "Registrar Gasto"}
       />
     </form>
   );
